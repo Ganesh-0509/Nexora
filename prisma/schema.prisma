@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+  RECRUITER
+}
+
+enum OpportunityType {
+  HACKATHON
+  INTERNSHIP
+  PLACEMENT
+  EVENT
+  SCHOLARSHIP
+}
+
+enum OpportunityDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model User {
+  id                  String         @id @default(cuid())
+  email               String         @unique
+  clerkId             String         @unique
+  username            String?        @unique
+  onboardingCompleted Boolean        @default(false)
+  role                UserRole       @default(STUDENT)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  
+  profile             Profile?
+  bookmarks           Bookmark[]
+  notifications       Notification[]
+  savedSearches       SavedSearch[]
+  activities          UserActivity[]
+}
+
+model Profile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  fullName           String?
+  bio                String?  @db.Text
+  college            String?
+  graduationYear     Int?
+  experienceLevel    String?  // e.g., Beginner, Intermediate, Advanced
+  remotePreference   String?  // e.g., Remote, On-site, Hybrid
+  
+  preferredLocations String[]
+  preferredRoles     String[]
+  preferredDomains   String[]
+  
+  resumeUrl          String?
+  linkedinUrl        String?
+  githubUrl          String?
+  
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills             Skill[]  @relation("ProfileSkills")
+  interests          Tag[]    @relation("ProfileInterests")
+}
+
+model Company {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  logoUrl     String?
+  websiteUrl  String?
+  description String?       @db.Text
+  location    String?
+  
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id               String                @id @default(cuid())
+  title            String
+  description      String                @db.Text
+  type             OpportunityType
+  difficulty       OpportunityDifficulty @default(BEGINNER)
+  
+  companyId        String
+  company          Company               @relation(fields: [companyId], references: [id])
+  
+  location         String?
+  isRemote         Boolean               @default(false)
+  deadline         DateTime?
+  stipend          String?
+  prizePool        String?
+  
+  sourcePlatform   String?
+  sourceUrl        String?
+  
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  
+  skillsRequired   Skill[]               @relation("OpportunitySkills")
+  tags             Tag[]                 @relation("OpportunityTags")
+  bookmarks        Bookmark[]
+  activities       UserActivity[]
+  
+  // Recommendation metadata (JSON for flexibility)
+  metadata         Json?                 @default("{}")
+
+  @@index([type])
+  @@index([deadline])
+  @@index([isRemote])
+}
+
+model Skill {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  
+  profiles      Profile[]     @relation("ProfileSkills")
+  opportunities Opportunity[] @relation("OpportunitySkills")
+}
+
+model Tag {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  
+  profiles      Profile[]     @relation("ProfileInterests")
+  opportunities Opportunity[] @relation("OpportunityTags")
+}
+
+model Bookmark {
+  id            String      @id @default(cuid())
+  userId        String
+  opportunityId String
+  createdAt     DateTime    @default(now())
+  
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, opportunityId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  message     String   @db.Text
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model SavedSearch {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  filters     Json     // Storing filter criteria as JSON
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum ActivityType {
+  VIEW
+  BOOKMARK
+  SEARCH
+  CLICK
+  APPLY
+}
+
+model UserActivity {
+  id             String       @id @default(cuid())
+  userId         String
+  type           ActivityType
+  opportunityId  String?
+  metadata       Json?        @default("{}")
+  createdAt      DateTime     @default(now())
+  
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity    Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  @@index([userId, type])
+  @@index([createdAt])
+}
