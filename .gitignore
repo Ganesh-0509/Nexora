@@ -48,3 +48,7 @@ test-results/
 # Extension specific
 nexora-extension/dist/
 nexora-extension/node_modules/
+
+# AI Assistant
+.claude/
+

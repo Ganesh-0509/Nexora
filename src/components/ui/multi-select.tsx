@@ -17,7 +17,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "./popover";
 
 interface MultiSelectProps {
   options: { label: string; value: string }[];
@@ -35,14 +35,15 @@ export function MultiSelect({
   className,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
+  const safeSelected = Array.isArray(selected) ? selected : [];
 
   const handleUnselect = (item: string) => {
-    onChange(selected.filter((i) => i !== item));
+    onChange(safeSelected.filter((i) => i !== item));
   };
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -80,7 +81,7 @@ export function MultiSelect({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 rounded-xl" align="start">
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-xl" align="start">
           <Command className="rounded-xl">
             <CommandInput placeholder="Search..." />
             <CommandList>
@@ -89,19 +90,24 @@ export function MultiSelect({
                 {options.map((option) => (
                   <CommandItem
                     key={option.value}
+                    value={option.label}
+                    className="cursor-pointer pointer-events-auto"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     onSelect={() => {
-                      onChange(
-                        selected.includes(option.value)
-                          ? selected.filter((item) => item !== option.value)
-                          : [...selected, option.value]
-                      );
-                      setOpen(true);
+                      const isSelected = safeSelected.includes(option.value);
+                      const newSelected = isSelected
+                        ? safeSelected.filter((item) => item !== option.value)
+                        : [...safeSelected, option.value];
+                      onChange(newSelected);
                     }}
                   >
                     <div
                       className={cn(
                         "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                        selected.includes(option.value)
+                        safeSelected.includes(option.value)
                           ? "bg-primary text-primary-foreground"
                           : "opacity-50 [&_svg]:invisible"
                       )}

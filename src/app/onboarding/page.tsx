@@ -15,16 +15,17 @@ import {
   ChevronLeft,
   Loader2,
   Globe,
-  Github,
-  Linkedin,
+  Link as LinkIcon,
   FileText
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { OnboardingSchema, OnboardingInput } from "@/server/validators/onboarding.validator";
+import posthog from "posthog-js";
 
 const DOMAINS = [
   { label: "AI/ML", value: "ai_ml" },
@@ -71,7 +72,7 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   const form = useForm<OnboardingInput>({
-    resolver: zodResolver(OnboardingSchema),
+    resolver: zodResolver(OnboardingSchema) as any,
     defaultValues: {
       fullName: "",
       college: "",
@@ -90,13 +91,16 @@ export default function OnboardingPage() {
   });
 
   const nextStep = async () => {
-    let fieldsToValidate: any[] = [];
+    let fieldsToValidate: (keyof OnboardingInput)[] = [];
     if (step === 1) fieldsToValidate = ["fullName", "college", "graduationYear"];
     if (step === 2) fieldsToValidate = ["skills", "interests"];
     if (step === 3) fieldsToValidate = ["preferredDomains", "preferredRoles", "preferredLocations", "remotePreference", "experienceLevel"];
-    
+
     const isValid = await form.trigger(fieldsToValidate);
-    if (isValid) setStep((s) => s + 1);
+    if (isValid) {
+      posthog.capture("onboarding_step_completed", { step, step_name: steps[step - 1]?.title });
+      setStep((s) => s + 1);
+    }
   };
 
   const onSubmit = async (data: OnboardingInput) => {
@@ -109,9 +113,23 @@ export default function OnboardingPage() {
 
       if (!response.ok) throw new Error("Failed to save profile");
 
+      posthog.capture("onboarding_completed", {
+        experience_level: data.experienceLevel,
+        skills_count: data.skills.length,
+        preferred_domains: data.preferredDomains,
+        preferred_roles: data.preferredRoles,
+      });
+      posthog.identify(posthog.get_distinct_id(), {
+        name: data.fullName,
+        college: data.college,
+        graduation_year: data.graduationYear,
+        experience_level: data.experienceLevel,
+      });
+
       toast.success("Profile completed!");
       router.push("/dashboard");
     } catch (error) {
+      posthog.captureException(error);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
@@ -273,14 +291,14 @@ export default function OnboardingPage() {
                   </div>
                   <div className="space-y-4">
                     <div className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-muted/30">
-                       <div className="h-10 w-10 rounded-xl bg-background border flex items-center justify-center">
-                          <Linkedin className="h-5 w-5 text-[#0077B5]" />
+                        <div className="h-10 w-10 rounded-xl bg-background border flex items-center justify-center">
+                          <LinkIcon className="h-5 w-5 text-[#0077B5]" />
                        </div>
                        <Input {...form.register("linkedinUrl")} placeholder="linkedin.com/in/alex" className="flex-1 bg-transparent border-none focus-visible:ring-0" />
                     </div>
                     <div className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-muted/30">
                        <div className="h-10 w-10 rounded-xl bg-background border flex items-center justify-center">
-                          <Github className="h-5 w-5" />
+                          <Globe className="h-5 w-5" />
                        </div>
                        <Input {...form.register("githubUrl")} placeholder="github.com/alex" className="flex-1 bg-transparent border-none focus-visible:ring-0" />
                     </div>

@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { Loader2, Sparkles, SearchX } from "lucide-react";
 import { motion } from "framer-motion";
 
-export function InfiniteFeed() {
+export function InfiniteFeed({ initialType }: { initialType?: string }) {
   const [type] = useQueryState("type", parseAsString);
   const [remote] = useQueryState("remote", parseAsBoolean);
   const [paid] = useQueryState("paid", parseAsBoolean);
@@ -25,7 +25,7 @@ export function InfiniteFeed() {
     status,
     isLoading,
   } = useOpportunities({
-    type: type || undefined,
+    type: type || initialType || undefined,
     isRemote: remote || undefined,
     minStipend: paid || undefined,
     search: search || undefined,

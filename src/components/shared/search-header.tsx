@@ -3,18 +3,24 @@
 import { useQueryState, parseAsString } from "nuqs";
 import { Search, SlidersHorizontal, ArrowUpDown } from "lucide-react";
 import { useDebounce } from "use-debounce";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import posthog from "posthog-js";
 
 export function SearchHeader() {
   const [search, setSearch] = useQueryState("search", parseAsString);
   const [sort, setSort] = useQueryState("sort", parseAsString.withDefault("recent"));
   const [localSearch, setLocalSearch] = useState(search || "");
   const [debouncedSearch] = useDebounce(localSearch, 500);
+  const prevDebouncedSearch = useRef(debouncedSearch);
 
   useEffect(() => {
     setSearch(debouncedSearch || null);
+    if (debouncedSearch && debouncedSearch !== prevDebouncedSearch.current) {
+      posthog.capture("opportunities_searched", { query: debouncedSearch });
+    }
+    prevDebouncedSearch.current = debouncedSearch;
   }, [debouncedSearch, setSearch]);
 
   return (
@@ -31,7 +37,10 @@ export function SearchHeader() {
       <div className="flex items-center gap-2 w-full md:w-auto">
         <select
           value={sort}
-          onChange={(e) => setSort(e.target.value)}
+          onChange={(e) => {
+            setSort(e.target.value);
+            posthog.capture("opportunities_sorted", { sort_by: e.target.value });
+          }}
           className="h-12 px-4 rounded-2xl border border-border bg-card text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
         >
           <option value="recent">Newest First</option>

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useState } from "react";
+import posthog from "posthog-js";
 
 interface OpportunityCardProps {
   opportunity: any;
@@ -33,8 +34,24 @@ export function OpportunityCard({
 
   const handleBookmark = (e: React.MouseEvent) => {
     e.preventDefault();
-    setBookmarked(!bookmarked);
+    const newBookmarked = !bookmarked;
+    setBookmarked(newBookmarked);
     onBookmarkToggle?.();
+    posthog.capture("opportunity_bookmark_toggled", {
+      opportunity_id: opportunity.id,
+      opportunity_title: opportunity.title,
+      opportunity_type: opportunity.type,
+      bookmarked: newBookmarked,
+    });
+  };
+
+  const handleViewDetails = () => {
+    posthog.capture("opportunity_view_details_clicked", {
+      opportunity_id: opportunity.id,
+      opportunity_title: opportunity.title,
+      opportunity_type: opportunity.type,
+      company: opportunity.company?.name,
+    });
   };
 
   const difficultyColors: Record<string, string> = {
@@ -93,7 +110,7 @@ export function OpportunityCard({
             </Badge>
           )}
         </div>
-        <Link href={`/opportunities/${opportunity.id}`} className="block">
+        <Link href={`/opportunities/${opportunity.id}`} className="block" onClick={handleViewDetails}>
           <h3 className="text-xl font-bold font-outfit leading-tight group-hover:text-primary transition-colors">
             {opportunity.title}
           </h3>
@@ -136,7 +153,7 @@ export function OpportunityCard({
             {opportunity.stipend || opportunity.prizePool || "unpaid"}
           </p>
         </div>
-        <Link href={`/opportunities/${opportunity.id}`}>
+        <Link href={`/opportunities/${opportunity.id}`} onClick={handleViewDetails}>
           <Button className="rounded-xl px-5 h-10 group/btn shadow-xl shadow-primary/5">
             View Details
             <ArrowUpRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />

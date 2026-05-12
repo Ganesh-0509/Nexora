@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MultiSelect } from "@/components/ui/multi-select";
+import posthog from "posthog-js";
 
 const OPPORTUNITY_TYPES = [
   { label: "Internships", value: "INTERNSHIP" },
@@ -46,6 +47,7 @@ export function FilterSidebar() {
     setIsRemote(null);
     setMinStipend(null);
     setSkills([]);
+    posthog.capture("opportunity_filters_reset");
   };
 
   const activeCount = [type, isRemote, minStipend, skills.length > 0].filter(Boolean).length;
@@ -80,7 +82,11 @@ export function FilterSidebar() {
             {OPPORTUNITY_TYPES.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setType(type === opt.value ? null : opt.value)}
+                onClick={() => {
+                  const newType = type === opt.value ? null : opt.value;
+                  setType(newType);
+                  if (newType) posthog.capture("opportunity_filter_applied", { filter: "type", value: newType });
+                }}
                 className={cn(
                   "flex items-center justify-between px-4 py-2.5 rounded-xl border text-sm font-medium transition-all text-left",
                   type === opt.value ? "bg-primary/10 border-primary text-primary" : "bg-card border-border hover:border-primary/50"
@@ -104,7 +110,10 @@ export function FilterSidebar() {
                  <input 
                     type="checkbox" 
                     checked={isRemote || false} 
-                    onChange={(e) => setIsRemote(e.target.checked ? true : null)}
+                    onChange={(e) => {
+                      setIsRemote(e.target.checked ? true : null);
+                      if (e.target.checked) posthog.capture("opportunity_filter_applied", { filter: "remote", value: true });
+                    }}
                     className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                  />
                  <span className="text-sm font-medium group-hover:text-primary transition-colors flex items-center gap-2">
@@ -116,7 +125,10 @@ export function FilterSidebar() {
                  <input 
                     type="checkbox" 
                     checked={minStipend || false} 
-                    onChange={(e) => setMinStipend(e.target.checked ? true : null)}
+                    onChange={(e) => {
+                      setMinStipend(e.target.checked ? true : null);
+                      if (e.target.checked) posthog.capture("opportunity_filter_applied", { filter: "paid", value: true });
+                    }}
                     className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                  />
                  <span className="text-sm font-medium group-hover:text-primary transition-colors flex items-center gap-2">
@@ -133,10 +145,15 @@ export function FilterSidebar() {
               <Sparkles className="h-4 w-4" />
               Desired Skills
            </Label>
-           <MultiSelect 
-              options={SKILLS} 
-              selected={skills} 
-              onChange={setSkills} 
+           <MultiSelect
+              options={SKILLS}
+              selected={skills}
+              onChange={(val) => {
+                setSkills(val);
+                if (val.length > skills.length) {
+                  posthog.capture("opportunity_filter_applied", { filter: "skills", value: val });
+                }
+              }}
               placeholder="Search skills..."
            />
         </div>

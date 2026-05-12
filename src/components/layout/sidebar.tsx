@@ -77,7 +77,9 @@ export function Sidebar() {
             <p className="truncate text-sm font-semibold">User Name</p>
             <p className="truncate text-xs text-muted-foreground">user@example.com</p>
           </div>
-          <Settings className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary transition-colors" />
+          <Link href="/settings">
+            <Settings className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary transition-colors" />
+          </Link>
         </div>
         <button className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
           <LogOut className="h-5 w-5" />

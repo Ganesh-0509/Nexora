@@ -5,6 +5,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, Zap, Target, Globe } from "lucide-react";
 import Link from "next/link";
+import posthog from "posthog-js";
 
 export default function LandingPage() {
   const container = {
@@ -67,7 +68,7 @@ export default function LandingPage() {
               variants={item}
               className="mt-10 flex flex-col items-center gap-4 sm:flex-row"
             >
-              <Link href="/signup">
+              <Link href="/signup" onClick={() => posthog.capture("signup_cta_clicked", { location: "hero" })}>
                 <Button size="lg" className="h-12 rounded-xl px-8 text-base shadow-xl shadow-primary/20">
                   Get Started for Free
                   <ArrowRight className="ml-2 h-5 w-5" />

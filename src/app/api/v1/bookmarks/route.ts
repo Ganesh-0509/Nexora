@@ -4,6 +4,7 @@ import { ApiUtils } from "@/server/utils/api-response";
 import { withErrorHandler } from "@/server/utils/with-error-handler";
 import { NextRequest } from "next/server";
 import { db } from "@/server/db";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const { userId: clerkId } = await auth();
@@ -27,5 +28,16 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   if (!user) return ApiUtils.error("User not found", 404);
 
   const result = await BookmarkService.toggleBookmark(user.id, opportunityId);
+
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: clerkId,
+    event: "opportunity_bookmarked_server",
+    properties: {
+      opportunity_id: opportunityId,
+      bookmarked: result.bookmarked,
+    },
+  });
+
   return ApiUtils.success(result);
 });
