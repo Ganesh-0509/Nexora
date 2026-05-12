@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, Zap, Target, Globe } from "lucide-react";
@@ -8,7 +8,7 @@ import Link from "next/link";
 import posthog from "posthog-js";
 
 export default function LandingPage() {
-  const container = {
+  const container: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -19,7 +19,7 @@ export default function LandingPage() {
     },
   };
 
-  const item = {
+  const item: Variants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } },
   };
