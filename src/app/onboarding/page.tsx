@@ -66,9 +66,25 @@ const SKILLS = [
   { label: "Figma", value: "figma" },
 ];
 
+const LOCATIONS = [
+  { label: "Remote", value: "remote" },
+  { label: "Bangalore", value: "bangalore" },
+  { label: "Mumbai", value: "mumbai" },
+  { label: "Delhi/NCR", value: "delhi" },
+  { label: "Hyderabad", value: "hyderabad" },
+  { label: "Pune", value: "pune" },
+  { label: "Chennai", value: "chennai" },
+  { label: "San Francisco", value: "sf" },
+  { label: "New York", value: "ny" },
+  { label: "London", value: "london" },
+];
+
 export default function OnboardingPage() {
   const [step, setStep] = React.useState(1);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const form = useForm<OnboardingInput>({
@@ -90,6 +106,14 @@ export default function OnboardingPage() {
     },
   });
 
+  const { errors } = form.formState;
+
+  React.useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log("Onboarding Validation Errors:", errors);
+    }
+  }, [errors]);
+
   const nextStep = async () => {
     let fieldsToValidate: (keyof OnboardingInput)[] = [];
     if (step === 1) fieldsToValidate = ["fullName", "college", "graduationYear"];
@@ -103,6 +127,40 @@ export default function OnboardingPage() {
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await processFile(file);
+    }
+  };
+
+  const processFile = async (file: File) => {
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
+
+    setSelectedFile(file);
+    setIsUploading(true);
+    
+    // Simulate upload
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Mock URL for now - in production, this would be the actual storage URL
+      const mockUrl = `https://storage.nexora.com/resumes/${Math.random().toString(36).substring(7)}.pdf`;
+      form.setValue("resumeUrl", mockUrl, { shouldValidate: true });
+      toast.success("Resume uploaded successfully");
+    } catch (error) {
+      toast.error("Failed to upload resume");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const onSubmit = async (data: OnboardingInput) => {
     setIsLoading(true);
     try {
@@ -111,7 +169,12 @@ export default function OnboardingPage() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) throw new Error("Failed to save profile");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || "Failed to save profile");
+      }
+
+      const result = await response.json();
 
       posthog.capture("onboarding_completed", {
         experience_level: data.experienceLevel,
@@ -254,12 +317,19 @@ export default function OnboardingPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                        <div className="space-y-2">
                           <Label>Preferred Domains</Label>
-                          <MultiSelect options={DOMAINS} selected={form.watch("preferredDomains")} onChange={(v) => form.setValue("preferredDomains", v)} />
+                          <MultiSelect options={DOMAINS} selected={form.watch("preferredDomains")} onChange={(v) => form.setValue("preferredDomains", v, { shouldValidate: true })} />
+                          {form.formState.errors.preferredDomains && <p className="text-xs text-destructive">{form.formState.errors.preferredDomains.message}</p>}
                        </div>
                        <div className="space-y-2">
                           <Label>Preferred Roles</Label>
-                          <MultiSelect options={ROLES} selected={form.watch("preferredRoles")} onChange={(v) => form.setValue("preferredRoles", v)} />
+                          <MultiSelect options={ROLES} selected={form.watch("preferredRoles")} onChange={(v) => form.setValue("preferredRoles", v, { shouldValidate: true })} />
+                          {form.formState.errors.preferredRoles && <p className="text-xs text-destructive">{form.formState.errors.preferredRoles.message}</p>}
                        </div>
+                    </div>
+                    <div className="space-y-2">
+                       <Label>Preferred Locations</Label>
+                       <MultiSelect options={LOCATIONS} selected={form.watch("preferredLocations")} onChange={(v) => form.setValue("preferredLocations", v, { shouldValidate: true })} placeholder="Select locations..." />
+                       {form.formState.errors.preferredLocations && <p className="text-xs text-destructive">{form.formState.errors.preferredLocations.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>Experience Level</Label>
@@ -290,26 +360,76 @@ export default function OnboardingPage() {
                     <p className="text-muted-foreground mt-2">Connect your socials and upload your resume.</p>
                   </div>
                   <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-muted/30">
-                        <div className="h-10 w-10 rounded-xl bg-background border flex items-center justify-center">
-                          <LinkIcon className="h-5 w-5 text-[#0077B5]" />
-                       </div>
-                       <Input {...form.register("linkedinUrl")} placeholder="linkedin.com/in/alex" className="flex-1 bg-transparent border-none focus-visible:ring-0" />
+                     <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-muted/30">
+                          <div className="h-10 w-10 rounded-xl bg-background border flex items-center justify-center">
+                            <LinkIcon className="h-5 w-5 text-[#0077B5]" />
+                          </div>
+                          <Input {...form.register("linkedinUrl")} placeholder="https://linkedin.com/in/alex" className="flex-1 bg-transparent border-none focus-visible:ring-0" />
+                      </div>
+                      {errors.linkedinUrl && <p className="text-xs text-destructive px-4">{errors.linkedinUrl.message}</p>}
                     </div>
-                    <div className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-muted/30">
-                       <div className="h-10 w-10 rounded-xl bg-background border flex items-center justify-center">
-                          <Globe className="h-5 w-5" />
-                       </div>
-                       <Input {...form.register("githubUrl")} placeholder="github.com/alex" className="flex-1 bg-transparent border-none focus-visible:ring-0" />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-muted/30">
+                         <div className="h-10 w-10 rounded-xl bg-background border flex items-center justify-center">
+                            <Globe className="h-5 w-5" />
+                         </div>
+                         <Input {...form.register("githubUrl")} placeholder="https://github.com/alex" className="flex-1 bg-transparent border-none focus-visible:ring-0" />
+                      </div>
+                      {errors.githubUrl && <p className="text-xs text-destructive px-4">{errors.githubUrl.message}</p>}
                     </div>
                     <div className="mt-6">
-                       <Label className="mb-2 block">Resume (PDF)</Label>
-                       <div className="border-2 border-dashed border-border rounded-2xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer group">
-                          <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2 group-hover:text-primary transition-colors" />
-                          <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                          <p className="text-xs text-muted-foreground mt-1">Maximum file size 5MB</p>
-                       </div>
-                    </div>
+                        <Label className="mb-2 block">Resume (PDF)</Label>
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleFileChange} 
+                          accept=".pdf" 
+                          className="hidden" 
+                        />
+                        <div 
+                          onClick={() => fileInputRef.current?.click()}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const file = e.dataTransfer.files?.[0];
+                            if (file) processFile(file);
+                          }}
+                          className={cn(
+                            "border-2 border-dashed border-border rounded-2xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer group relative overflow-hidden",
+                            isUploading && "pointer-events-none opacity-70",
+                            selectedFile && "border-primary/50 bg-primary/5"
+                          )}
+                        >
+                          {isUploading ? (
+                            <div className="space-y-3">
+                              <Loader2 className="h-8 w-8 text-primary mx-auto animate-spin" />
+                              <p className="text-sm font-medium">Uploading your resume...</p>
+                            </div>
+                          ) : selectedFile ? (
+                            <div className="space-y-2">
+                              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+                                <FileText className="h-6 w-6 text-primary" />
+                              </div>
+                              <p className="text-sm font-bold truncate max-w-[200px] mx-auto">{selectedFile.name}</p>
+                              <p className="text-xs text-muted-foreground">Click to change file</p>
+                            </div>
+                          ) : (
+                            <>
+                              <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2 group-hover:text-primary transition-colors" />
+                              <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                              <p className="text-xs text-muted-foreground mt-1">Maximum file size 5MB</p>
+                            </>
+                          )}
+                        </div>
+                        {form.formState.errors.resumeUrl && (
+                          <p className="text-xs text-destructive mt-2">{form.formState.errors.resumeUrl.message}</p>
+                        )}
+                     </div>
                   </div>
                 </div>
               )}
@@ -331,7 +451,11 @@ export default function OnboardingPage() {
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button disabled={isLoading} className="rounded-xl px-10 h-11 shadow-lg shadow-primary/20">
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading} 
+                    className="rounded-xl px-10 h-11 shadow-lg shadow-primary/20"
+                  >
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Complete Profile"}
                   </Button>
                 )}

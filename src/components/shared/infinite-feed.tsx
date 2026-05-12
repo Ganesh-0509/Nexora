@@ -8,7 +8,8 @@ import { useEffect } from "react";
 import { Loader2, Sparkles, SearchX } from "lucide-react";
 import { motion } from "framer-motion";
 
-export function InfiniteFeed({ initialType }: { initialType?: string }) {
+export function InfiniteFeed({ initialType, isRecommended }: { initialType?: string; isRecommended?: boolean }) {
+
   const [type] = useQueryState("type", parseAsString);
   const [remote] = useQueryState("remote", parseAsBoolean);
   const [paid] = useQueryState("paid", parseAsBoolean);
@@ -30,7 +31,9 @@ export function InfiniteFeed({ initialType }: { initialType?: string }) {
     minStipend: paid || undefined,
     search: search || undefined,
     skills: skills.length > 0 ? skills : undefined,
+    isRecommended,
   });
+
 
   useEffect(() => {
     if (inView && hasNextPage) {
@@ -56,7 +59,9 @@ export function InfiniteFeed({ initialType }: { initialType?: string }) {
         </div>
         <h3 className="text-2xl font-bold font-outfit">No opportunities found</h3>
         <p className="text-muted-foreground mt-2 max-w-sm">
-          Try adjusting your filters or search keywords to find what you're looking for.
+          {isRecommended 
+            ? "Complete your profile or explore more opportunities to get personalized recommendations." 
+            : "Try adjusting your filters or search keywords to find what you're looking for."}
         </p>
       </div>
     );

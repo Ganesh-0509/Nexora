@@ -89,15 +89,12 @@ export default function LandingPage() {
             transition={{ delay: 0.8, duration: 1, type: "spring", bounce: 0.2 }}
             className="mt-20 relative mx-auto max-w-5xl"
           >
-            <div className="relative rounded-2xl border border-border bg-card/50 p-4 shadow-2xl backdrop-blur-sm">
-               <div className="aspect-video w-full rounded-xl bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center border border-border/50">
-                  <div className="text-muted-foreground font-medium flex flex-col items-center gap-4">
-                     <div className="h-16 w-16 rounded-2xl bg-background border border-border flex items-center justify-center shadow-sm">
-                        <Sparkles className="h-8 w-8 text-primary" />
-                     </div>
-                     <p className="text-lg">Dashboard Preview</p>
-                  </div>
-               </div>
+            <div className="relative rounded-2xl border border-border bg-card/50 p-2 shadow-2xl backdrop-blur-sm overflow-hidden">
+               <img 
+                  src="/images/dashboard-preview.png" 
+                  alt="Nexora Dashboard Preview" 
+                  className="w-full h-auto rounded-xl border border-border/50"
+               />
             </div>
             {/* Decorative elements */}
             <div className="absolute -z-10 -top-8 -right-8 h-32 w-32 rounded-full bg-primary/20 blur-2xl" />

@@ -15,6 +15,8 @@ import {
   User,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useUser, useClerk } from "@clerk/nextjs";
+
 
 const sidebarItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -26,6 +28,12 @@ const sidebarItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+
+  const handleSignOut = () => {
+    signOut(() => window.location.href = "/");
+  };
 
   return (
     <div className="flex h-screen w-64 flex-col border-r border-border bg-card/50 backdrop-blur-xl transition-all duration-300 ease-in-out lg:w-72">
@@ -70,18 +78,25 @@ export function Sidebar() {
 
       <div className="mt-auto border-t border-border p-4">
         <div className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-accent">
-          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-            <User className="h-5 w-5 text-muted-foreground" />
+          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center overflow-hidden border border-border">
+            {user?.imageUrl ? (
+              <img src={user.imageUrl} alt={user.fullName || "User"} className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-5 w-5 text-muted-foreground" />
+            )}
           </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="truncate text-sm font-semibold">User Name</p>
-            <p className="truncate text-xs text-muted-foreground">user@example.com</p>
+          <div className="flex-1 overflow-hidden text-left">
+            <p className="truncate text-sm font-semibold">{user?.fullName || "Guest User"}</p>
+            <p className="truncate text-xs text-muted-foreground">{user?.primaryEmailAddress?.emailAddress || "guest@example.com"}</p>
           </div>
           <Link href="/settings">
             <Settings className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary transition-colors" />
           </Link>
         </div>
-        <button className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
+        <button 
+          onClick={handleSignOut}
+          className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+        >
           <LogOut className="h-5 w-5" />
           Log Out
         </button>

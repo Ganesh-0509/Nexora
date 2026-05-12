@@ -10,7 +10,9 @@ export type OpportunityFilters = {
   search?: string;
   skills?: string[];
   domains?: string[];
+  isRecommended?: boolean;
 };
+
 
 export function useOpportunities(filters: OpportunityFilters) {
   return useInfiniteQuery({
@@ -29,12 +31,17 @@ export function useOpportunities(filters: OpportunityFilters) {
         ...(filters.domains?.length && { domains: filters.domains.join(",") }),
       });
 
-      const response = await api.get<any>(`/api/v1/opportunities?${queryParams.toString()}`);
+      const endpoint = filters.isRecommended 
+        ? `/api/v1/recommendations/feed?limit=20` 
+        : `/api/v1/opportunities?${queryParams.toString()}`;
+
+      const response = await api.get<any>(endpoint);
       return response;
     },
     getNextPageParam: (lastPage, allPages) => {
+      if (filters.isRecommended) return undefined; // Recommendation feed is not paginated yet
       const nextPage = allPages.length + 1;
-      return lastPage.data.length === 10 ? nextPage : undefined;
+      return lastPage.data?.length === 10 ? nextPage : undefined;
     },
     initialPageParam: 1,
   });

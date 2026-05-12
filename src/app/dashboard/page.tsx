@@ -7,24 +7,42 @@ import {
   Trophy, 
   Users, 
   TrendingUp,
-  ArrowUpRight,
-  Clock,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from "lucide-react";
-
-const stats = [
-  { label: "New Opportunities", value: "124", icon: Briefcase, color: "text-blue-500", bg: "bg-blue-500/10" },
-  { label: "Applied", value: "12", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-  { label: "Saved", value: "48", icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
-  { label: "Profile Views", value: "1.2k", icon: Users, color: "text-purple-500", bg: "bg-purple-500/10" },
-];
+import { useUser } from "@clerk/nextjs";
+import { InfiniteFeed } from "@/components/shared/infinite-feed";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 export default function DashboardPage() {
+  const { user, isLoaded } = useUser();
+
+  const { data: statsData } = useQuery({
+    queryKey: ["user-stats"],
+    queryFn: () => api.get<any>("/api/v1/user/stats"),
+  });
+
+  const { data: deadlinesData } = useQuery({
+    queryKey: ["user-deadlines"],
+    queryFn: () => api.get<any>("/api/v1/user/deadlines"),
+  });
+
+  const stats = [
+    { label: "New Opportunities", value: statsData?.data?.newOpportunities || "...", icon: Briefcase, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "Applied", value: statsData?.data?.applied ?? "...", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "Saved", value: statsData?.data?.saved ?? "...", icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
+    { label: "Profile Views", value: statsData?.data?.profileViews || "...", icon: Users, color: "text-purple-500", bg: "bg-purple-500/10" },
+  ];
+
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="space-y-8 pb-12">
         <div>
-          <h1 className="text-3xl font-bold font-outfit">Welcome back, Alex 👋</h1>
+          <h1 className="text-3xl font-bold font-outfit">
+            Welcome back, {isLoaded ? (user?.firstName || "Student") : "..."} 👋
+          </h1>
           <p className="text-muted-foreground mt-1">Here's what's happening with your opportunities today.</p>
         </div>
 
@@ -59,44 +77,15 @@ export default function DashboardPage() {
           {/* Recent Opportunities */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">Recommended for you</h2>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-bold">Recommended for you</h2>
+              </div>
               <button className="text-sm font-medium text-primary hover:underline">View all</button>
             </div>
             
-            <div className="space-y-4">
-              {[1, 2, 3].map((item) => (
-                <motion.div
-                  key={item}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + (item * 0.1) }}
-                  className="group p-5 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all cursor-pointer"
-                >
-                  <div className="flex gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center font-bold text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                      {item === 1 ? "G" : item === 2 ? "M" : "A"}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold group-hover:text-primary transition-colors">
-                          {item === 1 ? "Software Engineer Intern" : item === 2 ? "Full-Stack Developer" : "Product Design Fellow"}
-                        </h3>
-                        <span className="text-xs text-muted-foreground flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          2h ago
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {item === 1 ? "Google" : item === 2 ? "Meta" : "Adobe"} • Remote • $4k - $6k
-                      </p>
-                      <div className="flex gap-2 mt-3">
-                        <span className="px-2 py-1 rounded-md bg-secondary text-[10px] font-bold uppercase tracking-wider text-muted-foreground">React</span>
-                        <span className="px-2 py-1 rounded-md bg-secondary text-[10px] font-bold uppercase tracking-wider text-muted-foreground">TypeScript</span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+            <div className="mt-4">
+               <InfiniteFeed isRecommended />
             </div>
           </div>
 
@@ -104,15 +93,29 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold">Upcoming Deadlines</h2>
             <div className="space-y-4">
-              {[1, 2].map((item) => (
-                <div key={item} className="p-4 rounded-2xl border border-border bg-muted/30">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-amber-600 bg-amber-500/10 px-2 py-1 rounded-full">3 days left</span>
-                  </div>
-                  <h4 className="font-semibold text-sm">HackerCup 2026 Finals</h4>
-                  <p className="text-xs text-muted-foreground mt-1">Competitive Programming</p>
+              {deadlinesData?.data && deadlinesData.data.length > 0 ? (
+                deadlinesData.data.map((item: any, i: number) => {
+                  const daysLeft = Math.ceil((new Date(item.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                  return (
+                    <div key={item.id} className="p-4 rounded-2xl border border-border bg-card shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={cn(
+                          "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
+                          daysLeft <= 5 ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
+                        )}>
+                          {daysLeft} days left
+                        </span>
+                      </div>
+                      <h4 className="font-semibold text-sm">{item.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">{item.type}</p>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-8 rounded-2xl border border-dashed border-border bg-muted/20 text-center">
+                  <p className="text-xs text-muted-foreground">Bookmark opportunities to track deadlines here.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import posthog from "posthog-js";
 
 interface OpportunityCardProps {
@@ -31,6 +32,11 @@ export function OpportunityCard({
   onBookmarkToggle 
 }: OpportunityCardProps) {
   const [bookmarked, setBookmarked] = useState(isBookmarked);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleBookmark = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -83,7 +89,7 @@ export function OpportunityCard({
             </h4>
             <div className="flex items-center text-[10px] text-muted-foreground mt-0.5">
               <Clock className="h-3 w-3 mr-1" />
-              {formatDistanceToNow(new Date(opportunity.createdAt))} ago
+              {isMounted ? `${formatDistanceToNow(new Date(opportunity.createdAt))} ago` : "Recently"}
             </div>
           </div>
         </div>
@@ -162,10 +168,20 @@ export function OpportunityCard({
       </div>
 
       {/* Match Score Badge (Premium Detail) */}
-      <div className="absolute -top-3 right-8 px-3 py-1 rounded-full bg-background border border-border shadow-sm flex items-center gap-1.5 animate-pulse">
-        <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
-        <span className="text-[10px] font-bold">95% Match</span>
-      </div>
+      {(opportunity.matchScore !== undefined || isMounted) && (
+        <div className={cn(
+          "absolute -top-3 right-8 px-3 py-1 rounded-full bg-background border border-border shadow-sm flex items-center gap-1.5 transition-all duration-500",
+          opportunity.matchScore >= 80 ? "animate-pulse" : ""
+        )}>
+          <Zap className={cn(
+            "h-3 w-3",
+            opportunity.matchScore >= 80 ? "text-amber-500 fill-amber-500" : "text-primary"
+          )} />
+          <span className="text-[10px] font-bold">
+            {opportunity.matchScore ? `${opportunity.matchScore}% Match` : "95% Match"}
+          </span>
+        </div>
+      )}
     </motion.div>
   );
 }
